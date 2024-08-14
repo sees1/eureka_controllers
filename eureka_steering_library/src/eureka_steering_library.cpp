@@ -98,6 +98,15 @@ controller_interface::CallbackReturn EurekaSteeringLibrary::on_configure(
     rear_wheels_state_names_ = params_.rear_wheels_names;
   }
 
+  if (!params_.middle_wheels_state_names.empty())
+  {
+    middle_wheels_state_names_ = params_.middle_wheels_state_names;
+  }
+  else
+  {
+    middle_wheels_state_names_ = params_.middle_wheels_names;
+  }
+
   if (!params_.front_wheels_state_names.empty())
   {
     front_wheels_state_names_ = params_.front_wheels_state_names;
@@ -286,40 +295,26 @@ EurekaSteeringLibrary::command_interface_configuration() const
   command_interfaces_config.type = controller_interface::interface_configuration_type::INDIVIDUAL;
   command_interfaces_config.names.reserve(nr_cmd_itfs_);
 
-  if (params_.front_steering)
+  for (size_t i = 0; i < params_.front_wheels_names.size(); i++)
   {
-    // если управляется передними колесами, то скорость к роботу от контроллера идет
-    // на задние колеса, а угол от контроллера идет на передние колеса(управляющие).
-    // аналог автомобиля
-    for (size_t i = 0; i < params_.rear_wheels_names.size(); i++)
-    {
-      command_interfaces_config.names.push_back(
-        params_.rear_wheels_names[i] + "/" + hardware_interface::HW_IF_VELOCITY);
-    }
-
-    for (size_t i = 0; i < params_.front_wheels_names.size(); i++)
-    {
-      command_interfaces_config.names.push_back(
-        params_.front_wheels_names[i] + "/" + hardware_interface::HW_IF_POSITION);
-    }
+    command_interfaces_config.names.push_back(
+      params_.front_wheels_names[i] + "/" + hardware_interface::HW_IF_POSITION);
   }
-  else
+
+  // движитель находится в средней части?
+
+  for (size_t i = 0; i < params_.middle_wheels_names.size(); i++)
   {
-    // если управляется задними колесами, то наоборот, скорость от контроллера идет
-    // на передние колеса, а угол от контроллера идет на задние колеса (управляющие)
-    // аналог рохли
-    for (size_t i = 0; i < params_.front_wheels_names.size(); i++)
-    {
-      command_interfaces_config.names.push_back(
-        params_.front_wheels_names[i] + "/" + hardware_interface::HW_IF_VELOCITY);
-    }
-
-    for (size_t i = 0; i < params_.rear_wheels_names.size(); i++)
-    {
-      command_interfaces_config.names.push_back(
-        params_.rear_wheels_names[i] + "/" + hardware_interface::HW_IF_POSITION);
-    }
+    command_interfaces_config.names.push_back(
+      params_.rear_wheels_names[i] + "/" + hardware_interface::HW_IF_VELOCITY);
   }
+
+  for (size_t i = 0; i < params_.rear_wheels_names.size(); i++)
+  {
+    command_interfaces_config.names.push_back(
+      params_.rear_wheels_names[i] + "/" + hardware_interface::HW_IF_POSITION);
+  }
+
   return command_interfaces_config;
 }
 
@@ -333,40 +328,23 @@ EurekaSteeringLibrary::state_interface_configuration() const
   const auto traction_wheels_feedback = params_.position_feedback
                                           ? hardware_interface::HW_IF_POSITION
                                           : hardware_interface::HW_IF_VELOCITY;
-  if (params_.front_steering)
-  {
-    // если управляется передними колесами, то состояние идет от робота в зависимости
-    // от выбранного типа фидбека (позиции или скорости). задние колеса, которые,
-    // не участвуют в управлении, а лишь обладающие движителем, отдают свое состояние
-    // по позиции или скорости, а передние (управляемые) в свою очередь отдают позицию
-    for (size_t i = 0; i < rear_wheels_state_names_.size(); i++)
-    {
-      state_interfaces_config.names.push_back(
-        rear_wheels_state_names_[i] + "/" + traction_wheels_feedback);
-    }
 
-    for (size_t i = 0; i < front_wheels_state_names_.size(); i++)
-    {
-      state_interfaces_config.names.push_back(
-        front_wheels_state_names_[i] + "/" + hardware_interface::HW_IF_POSITION);
-    }
+  for (size_t i = 0; i < front_wheels_state_names_.size(); i++)
+  {
+    state_interfaces_config.names.push_back(
+      front_wheels_state_names_[i] + "/" + hardware_interface::HW_IF_POSITION);
   }
-  else
-  {
-    // в данной конфигурации, задние колеса управляемые и могут отдать лишь позицию,
-    // однако, передние, обладающие движителем, отдают либо скорость либо позицию,
-    // в зависимости от выбранного типа фидбека
-    for (size_t i = 0; i < front_wheels_state_names_.size(); i++)
-    {
-      state_interfaces_config.names.push_back(
-        front_wheels_state_names_[i] + "/" + traction_wheels_feedback);
-    }
 
-    for (size_t i = 0; i < rear_wheels_state_names_.size(); i++)
-    {
-      state_interfaces_config.names.push_back(
-        rear_wheels_state_names_[i] + "/" + hardware_interface::HW_IF_POSITION);
-    }
+  for (size_t i = 0; i < params_.middle_wheels_names.size(); i++)
+  {
+    state_interfaces_config.names.push_back(
+      middle_wheels_state_names[i] + "/" + traction_wheels_feedback);
+  }
+
+  for (size_t i = 0; i < rear_wheels_state_names_.size(); i++)
+  {
+    state_interfaces_config.names.push_back(
+      rear_wheels_state_names_[i] + "/" + hardware_interface::HW_IF_POSITION);
   }
 
   return state_interfaces_config;
