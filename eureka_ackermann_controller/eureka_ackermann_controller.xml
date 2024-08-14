@@ -1,0 +1,8 @@
+<library path="eureka_ackermann_controller">
+  <class name="eureka_ackermann_controller/EurekaAckermannController"
+         type="eureka_ackermann_controller::EurekaAckermannController" base_class_type="controller_interface::ChainableControllerInterface">
+  <description>
+    Steering controller for Ackermann (car-like) kinematics with two traction and four steering joints.
+  </description>
+  </class>
+</library>

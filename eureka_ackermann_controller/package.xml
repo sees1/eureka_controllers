@@ -1,0 +1,35 @@
+<?xml version="1.0"?>
+<?xml-model href="http://download.ros.org/schema/package_format3.xsd" schematypens="http://www.w3.org/2001/XMLSchema"?>
+<package format="3">
+  <name>eureka_ackermann_controller</name>
+  <version>1.0.0</version>
+  <description>Steering controller for six wheel Ackermann kinematics. Rear and front pair of wheel steering and middle pair is fixed.</description>
+  <license>Apache License 2.0</license>
+  <maintainer email="sewa.egorov@yandex.ru">Vsevolod Egorov</maintainer>
+
+  <author email="sewa.egorov@yandex.ru">Vsevolod Egorov</author>
+
+  <buildtool_depend>ament_cmake</buildtool_depend>
+
+  <build_depend>generate_parameter_library</build_depend>
+
+  <depend>backward_ros</depend>
+  <depend>control_msgs</depend>
+  <depend>controller_interface</depend>
+  <depend>hardware_interface</depend>
+  <depend>pluginlib</depend>
+  <depend>rclcpp</depend>
+  <depend>rclcpp_lifecycle</depend>
+  <depend>std_srvs</depend>
+  <depend>eureka_steering_library</depend>
+
+  <test_depend>ament_cmake_gmock</test_depend>
+  <test_depend>controller_manager</test_depend>
+  <test_depend>hardware_interface_testing</test_depend>
+  <test_depend>hardware_interface</test_depend>
+  <test_depend>ros2_control_test_assets</test_depend>
+
+  <export>
+    <build_type>ament_cmake</build_type>
+  </export>
+</package>
