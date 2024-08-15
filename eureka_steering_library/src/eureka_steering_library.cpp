@@ -302,11 +302,10 @@ EurekaSteeringLibrary::command_interface_configuration() const
   }
 
   // движитель находится в средней части?
-
   for (size_t i = 0; i < params_.middle_wheels_names.size(); i++)
   {
     command_interfaces_config.names.push_back(
-      params_.rear_wheels_names[i] + "/" + hardware_interface::HW_IF_VELOCITY);
+      params_.middle_wheels_names[i] + "/" + hardware_interface::HW_IF_VELOCITY);
   }
 
   for (size_t i = 0; i < params_.rear_wheels_names.size(); i++)
@@ -454,28 +453,19 @@ controller_interface::return_type EurekaSteeringLibrary::update_and_write_comman
 
     auto [traction_commands, steering_commands] =
       odometry_.get_commands(last_linear_velocity_, last_angular_velocity_, params_.open_loop);
-    if (params_.front_steering)
+
+    for (size_t i = 0; i < params_.front_wheels_names.size(); i++)
     {
-      for (size_t i = 0; i < params_.rear_wheels_names.size(); i++)
-      {
-        command_interfaces_[i].set_value(traction_commands[i]);
-      }
-      for (size_t i = 0; i < params_.front_wheels_names.size(); i++)
-      {
-        command_interfaces_[i + params_.rear_wheels_names.size()].set_value(steering_commands[i]);
-      }
+      command_interfaces_[i].set_value(steering_commands[i]);
     }
-    else
+    for (size_t i = 0; i < params_.middle_wheels_names.size(); i++)
     {
-      for (size_t i = 0; i < params_.front_wheels_names.size(); i++)
-      {
-        command_interfaces_[i].set_value(traction_commands[i]);
-      }
-      for (size_t i = 0; i < params_.rear_wheels_names.size(); i++)
-      {
-        command_interfaces_[i + params_.front_wheels_names.size()].set_value(
-          steering_commands[i]);
-      }
+      command_interfaces_[i + params_.front_wheels_names.size()].set_value(traction_commands[i]);
+    }
+    for (size_t i = 0; i < params_.rear_wheels_names.size(); i++)
+    {
+      command_interfaces_[i + params_.front_wheels_names.size() 
+                            + params_.middle_wheels_names.size()].set_value(-steering_commands[i]);
     }
   }
 
@@ -519,36 +509,41 @@ controller_interface::return_type EurekaSteeringLibrary::update_and_write_comman
     controller_state_publisher_->msg_.steering_angle_command.clear();
 
     auto number_of_traction_wheels = params_.rear_wheels_names.size();
-    auto number_of_steering_wheels = params_.front_wheels_names.size();
-
-    if (!params_.front_steering)
-    {
-      number_of_traction_wheels = params_.front_wheels_names.size();
-      number_of_steering_wheels = params_.rear_wheels_names.size();
-    }
+    auto number_of_steering_wheels = params_.front_wheels_names.size() +
+                                     params_.middle_wheels_names.size();
 
     for (size_t i = 0; i < number_of_traction_wheels; ++i)
     {
       if (params_.position_feedback)
       {
         controller_state_publisher_->msg_.traction_wheels_position.push_back(
-          state_interfaces_[i].get_value());
+          state_interfaces_[params_.front_wheels_names.size() + i].get_value());
       }
       else
       {
         controller_state_publisher_->msg_.traction_wheels_velocity.push_back(
-          state_interfaces_[i].get_value());
+          state_interfaces_[params_.front_wheels_names.size() + i].get_value());
       }
       controller_state_publisher_->msg_.linear_velocity_command.push_back(
-        command_interfaces_[i].get_value());
+        command_interfaces_[params_.front_wheels_names.size() + i].get_value());
     }
 
     for (size_t i = 0; i < number_of_steering_wheels; ++i)
     {
-      controller_state_publisher_->msg_.steer_positions.push_back(
-        state_interfaces_[number_of_traction_wheels + i].get_value());
-      controller_state_publisher_->msg_.steering_angle_command.push_back(
-        command_interfaces_[number_of_traction_wheels + i].get_value());
+      if (i > 2)
+      {
+        controller_state_publisher_->msg_.steer_positions.push_back(
+          state_interfaces_[number_of_steering_wheels + i].get_value());
+        controller_state_publisher_->msg_.steering_angle_command.push_back(
+          command_interfaces_[number_of_steering_wheels + i].get_value());
+      }
+      else
+      {
+        controller_state_publisher_->msg_.steer_positions.push_back(
+          state_interfaces_[i].get_value());
+        controller_state_publisher_->msg_.steering_angle_command.push_back(
+          command_interfaces_[i].get_value());
+      }
     }
 
     controller_state_publisher_->unlockAndPublish();
