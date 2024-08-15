@@ -337,7 +337,7 @@ EurekaSteeringLibrary::state_interface_configuration() const
   for (size_t i = 0; i < params_.middle_wheels_names.size(); i++)
   {
     state_interfaces_config.names.push_back(
-      middle_wheels_state_names[i] + "/" + traction_wheels_feedback);
+      middle_wheels_state_names_[i] + "/" + traction_wheels_feedback);
   }
 
   for (size_t i = 0; i < rear_wheels_state_names_.size(); i++)

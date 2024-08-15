@@ -136,6 +136,7 @@ protected:
   double last_angular_velocity_ = 0.0;
 
   std::vector<std::string> rear_wheels_state_names_;
+  std::vector<std::string> middle_wheels_state_names_;
   std::vector<std::string> front_wheels_state_names_;
 
 private:
