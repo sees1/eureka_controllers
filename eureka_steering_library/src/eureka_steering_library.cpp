@@ -533,9 +533,9 @@ controller_interface::return_type EurekaSteeringLibrary::update_and_write_comman
       if (i > 2)
       {
         controller_state_publisher_->msg_.steer_positions.push_back(
-          state_interfaces_[number_of_steering_wheels + i].get_value());
+          state_interfaces_[number_of_traction_wheels + i].get_value());
         controller_state_publisher_->msg_.steering_angle_command.push_back(
-          command_interfaces_[number_of_steering_wheels + i].get_value());
+          command_interfaces_[number_of_traction_wheels + i].get_value());
       }
       else
       {
