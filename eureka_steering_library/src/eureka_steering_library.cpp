@@ -178,7 +178,7 @@ controller_interface::CallbackReturn EurekaSteeringLibrary::on_configure(
   {
     // Tf State publisher
     tf_odom_s_publisher_ = get_node()->create_publisher<ControllerStateMsgTf>(
-      "~/tf_odometry", rclcpp::SystemDefaultsQoS());
+      "/tf", rclcpp::SystemDefaultsQoS());
     rt_tf_odom_state_publisher_ =
       std::make_unique<ControllerStatePublisherTf>(tf_odom_s_publisher_);
   }
