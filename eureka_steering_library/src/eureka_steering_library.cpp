@@ -126,13 +126,13 @@ controller_interface::CallbackReturn EurekaSteeringLibrary::on_configure(
   if (params_.use_stamped_vel)
   {
     ref_subscriber_twist_ = get_node()->create_subscription<ControllerTwistReferenceMsg>(
-      "~/reference", subscribers_qos,
+      "/cmd_vel_stamped", subscribers_qos,
       std::bind(&EurekaSteeringLibrary::reference_callback, this, std::placeholders::_1));
   }
   else
   {
     ref_subscriber_unstamped_ = get_node()->create_subscription<geometry_msgs::msg::Twist>(
-      "~/reference_unstamped", subscribers_qos,
+      "/cmd_vel", subscribers_qos,
       std::bind(
         &EurekaSteeringLibrary::reference_callback_unstamped, this, std::placeholders::_1));
   }
