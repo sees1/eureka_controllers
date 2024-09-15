@@ -89,6 +89,16 @@ controller_interface::CallbackReturn EurekaSteeringLibrary::on_configure(
 
   configure_odometry();
 
+  if (!params_.front_steer_mech_names.empty())
+  {
+    front_steer_mech_names_ = params_.front_steer_mech_names;
+  }
+
+  if (!params_.rear_steer_mech_names.empty())
+  {
+    rear_steer_mech_names_ = params_.rear_steer_mech_names;
+  }
+
   if (!params_.rear_wheels_state_names.empty())
   {
     rear_wheels_state_names_ = params_.rear_wheels_state_names;
@@ -295,23 +305,36 @@ EurekaSteeringLibrary::command_interface_configuration() const
   command_interfaces_config.type = controller_interface::interface_configuration_type::INDIVIDUAL;
   command_interfaces_config.names.reserve(nr_cmd_itfs_);
 
-  for (size_t i = 0; i < params_.front_wheels_names.size(); i++)
+  // steer mechanism
+  for (size_t i = 0; i < params_.front_steer_mech_names.size(); ++i)
   {
     command_interfaces_config.names.push_back(
-      params_.front_wheels_names[i] + "/" + hardware_interface::HW_IF_POSITION);
+    params_.front_steer_mech_names[i] + "/" + hardware_interface::HW_IF_POSITION);
   }
 
-  // движитель находится в средней части?
-  for (size_t i = 0; i < params_.middle_wheels_names.size(); i++)
+  for (size_t i = 0; i < params_.rear_steer_mech_names.size(); ++i)
+  {
+    command_interfaces_config.names.push_back(
+    params_.rear_steer_mech_names[i] + "/" + hardware_interface::HW_IF_POSITION);
+  }
+
+  // traction wheels
+  for (size_t i = 0; i < params_.front_wheels_names.size(); ++i)
+  {
+    command_interfaces_config.names.push_back(
+      params_.front_wheels_names[i] + "/" + hardware_interface::HW_IF_VELOCITY);
+  }
+
+  for (size_t i = 0; i < params_.middle_wheels_names.size(); ++i)
   {
     command_interfaces_config.names.push_back(
       params_.middle_wheels_names[i] + "/" + hardware_interface::HW_IF_VELOCITY);
   }
 
-  for (size_t i = 0; i < params_.rear_wheels_names.size(); i++)
+  for (size_t i = 0; i < params_.rear_wheels_names.size(); ++i)
   {
     command_interfaces_config.names.push_back(
-      params_.rear_wheels_names[i] + "/" + hardware_interface::HW_IF_POSITION);
+      params_.rear_wheels_names[i] + "/" + hardware_interface::HW_IF_VELOCITY);
   }
 
   return command_interfaces_config;
@@ -328,19 +351,33 @@ EurekaSteeringLibrary::state_interface_configuration() const
                                           ? hardware_interface::HW_IF_POSITION
                                           : hardware_interface::HW_IF_VELOCITY;
 
-  for (size_t i = 0; i < front_wheels_state_names_.size(); i++)
+  // steer mechanism
+  for (size_t i = 0; i < front_steer_mech_names_.size(); ++i)
+  {
+    state_interfaces_config.names.push_back(
+      front_steer_mech_names_[i] + "/" + hardware_interface::HW_IF_POSITION);
+  }
+
+  for (size_t i = 0; i < rear_steer_mech_names_.size(); ++i)
+  {
+    state_interfaces_config.names.push_back(
+      rear_steer_mech_names_[i] + "/" + hardware_interface::HW_IF_POSITION);
+  }
+
+  // traction wheels
+  for (size_t i = 0; i < front_wheels_state_names_.size(); ++i)
   {
     state_interfaces_config.names.push_back(
       front_wheels_state_names_[i] + "/" + hardware_interface::HW_IF_POSITION);
   }
 
-  for (size_t i = 0; i < params_.middle_wheels_names.size(); i++)
+  for (size_t i = 0; i < params_.middle_wheels_names.size(); ++i)
   {
     state_interfaces_config.names.push_back(
       middle_wheels_state_names_[i] + "/" + traction_wheels_feedback);
   }
 
-  for (size_t i = 0; i < rear_wheels_state_names_.size(); i++)
+  for (size_t i = 0; i < rear_wheels_state_names_.size(); ++i)
   {
     state_interfaces_config.names.push_back(
       rear_wheels_state_names_[i] + "/" + hardware_interface::HW_IF_POSITION);
@@ -454,18 +491,33 @@ controller_interface::return_type EurekaSteeringLibrary::update_and_write_comman
     auto [traction_commands, steering_commands] =
       odometry_.get_commands(last_linear_velocity_, last_angular_velocity_, params_.open_loop);
 
-    for (size_t i = 0; i < params_.front_wheels_names.size(); i++)
+    // steering commands
+    for (size_t i = 0; i < params_.front_steer_mech_names.size(); ++i)
     {
       command_interfaces_[i].set_value(steering_commands[i]);
     }
-    for (size_t i = 0; i < params_.middle_wheels_names.size(); i++)
+    for (size_t i = 0; i < params_.rear_steer_mech_names.size(); ++i)
     {
-      command_interfaces_[i + params_.front_wheels_names.size()].set_value(traction_commands[i]);
+      command_interfaces_[i + params_.front_steer_mech_names.size()].set_value(-steering_commands[i]);
     }
-    for (size_t i = 0; i < params_.rear_wheels_names.size(); i++)
+
+    size_t steering_intfc = params_.front_steer_mech_names.size() + params_.rear_steer_mech_names.size();
+
+    // traction commands
+    for (size_t i = 0; i < params_.front_wheels_names.size(); ++i)
     {
-      command_interfaces_[i + params_.front_wheels_names.size() 
-                            + params_.middle_wheels_names.size()].set_value(-steering_commands[i]);
+      command_interfaces_[i + steering_intfc].set_value(traction_commands[i]);
+    }
+    for (size_t i = 0; i < params_.middle_wheels_names.size(); ++i)
+    {
+      command_interfaces_[i + steering_intfc
+                            + params_.front_wheels_names.size()].set_value(traction_commands[i]);
+    }
+    for (size_t i = 0; i < params_.rear_wheels_names.size(); ++i)
+    {
+      command_interfaces_[i + steering_intfc
+                            + params_.front_wheels_names.size() 
+                            + params_.middle_wheels_names.size()].set_value(traction_commands[i]);
     }
   }
 
