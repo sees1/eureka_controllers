@@ -57,7 +57,8 @@ bool EurekaAckermannController::update_odometry(const rclcpp::Duration & period)
                                         traction_rear_right_wheel_value) / 3;
 
     if (std::isfinite(traction_left_side)       && std::isfinite(traction_right_side) &&
-        std::isfinite(steering_right_position)  && std::isfinite(steering_left_position))
+        std::isfinite(steering_right_position)  && std::isfinite(steering_left_position) &&
+        traction_left_side > 0.0001             && traction_right_side > 0.0001)
     {
       if (params_.position_feedback)
       {
