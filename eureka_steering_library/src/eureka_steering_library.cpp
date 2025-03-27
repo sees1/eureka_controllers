@@ -186,6 +186,27 @@ controller_interface::CallbackReturn EurekaSteeringLibrary::on_configure(
 
   try
   {
+    twist_stamped_publisher_ = get_node()->create_publisher<ControllerTwistReferenceMsg>(
+      "~/twist_stamped", rclcpp::SystemDefaultsQoS());
+    rt_twist_state_publisher_ = std::make_unique<ControllerStatePublisherTwist>(twist_stamped_publisher_);
+  }
+  catch(const std::exception& e)
+  {
+    fprintf(
+      stderr, "Exception thrown during publisher creation at configure stage with message : %s \n",
+      e.what());
+    return controller_interface::CallbackReturn::ERROR;
+  }
+
+  rt_twist_state_publisher_->lock();
+  rt_twist_state_publisher_->msg_.header.stamp = get_node()->now();
+  rt_twist_state_publisher_->msg_.header.frame_id = params_.odom_frame_id;
+  rt_twist_state_publisher_->msg_.twist.linear.x = 0;
+  rt_twist_state_publisher_->msg_.twist.angular.z = 0;
+  rt_twist_state_publisher_->unlock();
+
+  try
+  {
     // Tf State publisher
     tf_odom_s_publisher_ = get_node()->create_publisher<ControllerStateMsgTf>(
       "/tf", rclcpp::SystemDefaultsQoS());
@@ -532,10 +553,21 @@ controller_interface::return_type EurekaSteeringLibrary::update_and_write_comman
     rt_odom_state_publisher_->msg_.header.stamp = time;
     rt_odom_state_publisher_->msg_.pose.pose.position.x = odometry_.get_x();
     rt_odom_state_publisher_->msg_.pose.pose.position.y = odometry_.get_y();
+    rt_odom_state_publisher_->msg_.pose.pose.position.z = odometry_.get_z();
     rt_odom_state_publisher_->msg_.pose.pose.orientation = tf2::toMsg(orientation);
-    rt_odom_state_publisher_->msg_.twist.twist.linear.x = odometry_.get_linear();
+    rt_odom_state_publisher_->msg_.twist.twist.linear.x = odometry_.get_linear_x();
+    rt_odom_state_publisher_->msg_.twist.twist.linear.z = odometry_.get_linear_z();
     rt_odom_state_publisher_->msg_.twist.twist.angular.z = odometry_.get_angular();
     rt_odom_state_publisher_->unlockAndPublish();
+  }
+
+  if (rt_twist_state_publisher_->trylock())
+  {
+    rt_twist_state_publisher_->msg_.header.stamp = time;
+    rt_twist_state_publisher_->msg_.twist.linear.x = odometry_.get_linear_x();
+    rt_twist_state_publisher_->msg_.twist.linear.z = odometry_.get_linear_z();
+    rt_twist_state_publisher_->msg_.twist.angular.z = odometry_.get_angular();
+    rt_twist_state_publisher_->unlockAndPublish();
   }
 
   // Publish tf /odom frame

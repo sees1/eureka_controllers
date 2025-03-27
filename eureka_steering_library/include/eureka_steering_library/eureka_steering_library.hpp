@@ -42,6 +42,13 @@
 #include "nav_msgs/msg/odometry.hpp"
 #include "tf2_msgs/msg/tf_message.hpp"
 
+#include <tf2_geometry_msgs/tf2_geometry_msgs.hpp>
+
+#include <tf2/LinearMath/Quaternion.h>
+#include <tf2/LinearMath/Vector3.h>
+#include <tf2/LinearMath/Matrix3x3.h>
+
+
 namespace eureka_steering_library
 {
 class EurekaSteeringLibrary : public controller_interface::ChainableControllerInterface
@@ -102,12 +109,15 @@ protected:
   rclcpp::Duration ref_timeout_ = rclcpp::Duration::from_seconds(0.0);  // 0ms
 
   using ControllerStatePublisherOdom = realtime_tools::RealtimePublisher<ControllerStateMsgOdom>;
+  using ControllerStatePublisherTwist = realtime_tools::RealtimePublisher<ControllerTwistReferenceMsg>;
   using ControllerStatePublisherTf = realtime_tools::RealtimePublisher<ControllerStateMsgTf>;
 
   rclcpp::Publisher<ControllerStateMsgOdom>::SharedPtr odom_s_publisher_;
+  rclcpp::Publisher<ControllerTwistReferenceMsg>::SharedPtr twist_stamped_publisher_;
   rclcpp::Publisher<ControllerStateMsgTf>::SharedPtr tf_odom_s_publisher_;
 
   std::unique_ptr<ControllerStatePublisherOdom> rt_odom_state_publisher_;
+  std::unique_ptr<ControllerStatePublisherTwist> rt_twist_state_publisher_;
   std::unique_ptr<ControllerStatePublisherTf> rt_tf_odom_state_publisher_;
 
   // override methods from ChainableControllerInterface

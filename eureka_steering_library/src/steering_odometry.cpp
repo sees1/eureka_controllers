@@ -29,8 +29,11 @@ SteeringOdometry::SteeringOdometry(size_t velocity_rolling_window_size)
 : timestamp_(0.0),
   x_(0.0),
   y_(0.0),
+  z_(0.0),
   heading_(0.0),
   linear_(0.0),
+  linear_x_(0.0),
+  linear_z_(0.0),
   angular_(0.0),
   wheel_track_(0.0),
   wheelbase_(0.0),
@@ -40,6 +43,8 @@ SteeringOdometry::SteeringOdometry(size_t velocity_rolling_window_size)
   traction_left_wheel_old_pos_(0.0),
   velocity_rolling_window_size_(velocity_rolling_window_size),
   linear_acc_(velocity_rolling_window_size),
+  linear_x_acc_(velocity_rolling_window_size),
+  linear_z_acc_(velocity_rolling_window_size),
   angular_acc_(velocity_rolling_window_size)
 {
 }
@@ -51,27 +56,28 @@ void SteeringOdometry::init(const rclcpp::Time & time)
   timestamp_ = time;
 }
 
-bool SteeringOdometry::update_odometry(
-  const double linear_velocity, const double angular_velocity, const double dt)
-{
-  /// Integrate odometry:
-  integrate_fk(linear_velocity, angular_velocity, dt);
+// bool SteeringOdometry::update_odometry(
+//   const double linear_velocity, const double angular_velocity, const double dt)
+// {
+//   /// Integrate odometry:
+//   integrate_fk(linear_velocity, angular_velocity, dt);
 
-  /// We cannot estimate the speed with very small time intervals:
-  if (dt < 0.0001)
-  {
-    return false;  // Interval too small to integrate with
-  }
+//   /// We cannot estimate the speed with very small time intervals:
+//   if (dt < 0.0001)
+//   {
+//     return false;  // Interval too small to integrate with
+//   }
 
-  /// Estimate speeds using a rolling mean to filter them out:
-  linear_acc_.accumulate(linear_velocity);
-  angular_acc_.accumulate(angular_velocity);
+//   /// Estimate speeds using a rolling mean to filter them out:
+//   linear_acc_.accumulate(linear_velocity);
+//   angular_acc_.accumulate(angular_velocity);
 
-  linear_ = linear_acc_.getRollingMean();
-  angular_ = angular_acc_.getRollingMean();
+//   linear_ = linear_acc_.getRollingMean();
+//   angular_ = angular_acc_.getRollingMean();
 
-  return true;
-}
+//   return true;
+// }
+
 
 bool SteeringOdometry::update_from_position(
   const double traction_wheel_pos, const double steer_pos, const double dt)
@@ -126,7 +132,7 @@ bool SteeringOdometry::update_from_velocity(
   double linear_velocity = traction_wheel_vel * wheel_radius_;
   const double angular_velocity = std::tan(steer_pos) * linear_velocity / wheelbase_;
 
-  return update_odometry(linear_velocity, angular_velocity, dt);
+  // return update_odometry(linear_velocity, angular_velocity, dt);
 }
 
 double SteeringOdometry::get_linear_velocity_double_traction_axle(
@@ -152,7 +158,7 @@ bool SteeringOdometry::update_from_velocity(
 
   const double angular_velocity = std::tan(steer_pos_) * linear_velocity / wheelbase_;
 
-  return update_odometry(linear_velocity, angular_velocity, dt);
+  // return update_odometry(linear_velocity, angular_velocity, dt);
 }
 
 bool SteeringOdometry::update_from_velocity(
@@ -172,17 +178,25 @@ bool SteeringOdometry::update_from_velocity(
     right_traction_wheel_vel, left_traction_wheel_vel, steer_pos_);
   const double angular_velocity = steer_pos_ * linear_velocity / wheelbase_;
 
-  return update_odometry(linear_velocity, angular_velocity, dt);
+  // return update_odometry(linear_velocity, angular_velocity, dt);
 }
 
-void SteeringOdometry::update_open_loop(const double v_bx, const double omega_bz, const double dt)
+void SteeringOdometry::update_open_loop(const double v_bx, const double omega_bz, const double pitch_angle, const double dt)
 {
   /// Save last linear and angular velocity:
-  linear_ = v_bx;
-  angular_ = omega_bz;
+
+  linear_acc_.accumulate(v_bx);
+  linear_x_acc_.accumulate(v_bx * std::cos(pitch_angle));
+  linear_z_acc_.accumulate((-1) * v_bx * std::sin(pitch_angle));
+  angular_acc_.accumulate(omega_bz);
+
+  linear_ = linear_acc_.getRollingMean();
+  linear_x_ = linear_x_acc_.getRollingMean();
+  linear_z_ = linear_z_acc_.getRollingMean();
+  angular_ = angular_acc_.getRollingMean();
 
   /// Integrate odometry:
-  integrate_fk(v_bx, omega_bz, dt);
+  integrate_fk(linear_, angular_, pitch_angle, dt);
 }
 
 void SteeringOdometry::set_wheel_params(double wheel_radius, double wheelbase, double wheel_track)
@@ -322,7 +336,7 @@ void SteeringOdometry::integrate_runge_kutta_2(
   heading_ += omega_bz * dt;
 }
 
-void SteeringOdometry::integrate_fk(const double v_bx, const double omega_bz, const double dt)
+void SteeringOdometry::integrate_fk(const double v_bx, const double omega_bz, const double pitch_angle, const double dt)
 {
   const double delta_x_b = v_bx * dt;
   const double delta_theta = omega_bz * dt;
@@ -338,7 +352,10 @@ void SteeringOdometry::integrate_fk(const double v_bx, const double omega_bz, co
     const double heading_old = heading_;
     const double R = delta_x_b / delta_theta;
     heading_ += delta_theta;
-    x_ += R * (sin(heading_) - std::sin(heading_old));
+    double delta_x = R * (sin(heading_) - std::sin(heading_old)) * std::cos(pitch_angle);
+    double delta_z = R * std::abs((sin(heading_) - std::sin(heading_old))) * (-1) * std::sin(pitch_angle); 
+    x_ += delta_x;
+    z_ += delta_z;
     y_ += -R * (cos(heading_) - std::cos(heading_old));
   }
 }

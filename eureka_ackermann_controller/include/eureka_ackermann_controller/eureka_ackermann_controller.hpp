@@ -6,6 +6,7 @@
 #include "eureka_ackermann_controller/visibility_control.h"
 #include "eureka_ackermann_controller_parameters.hpp"
 #include "eureka_steering_library/eureka_steering_library.hpp"
+#include <sensor_msgs/msg/imu.hpp>
 
 namespace eureka_ackermann_controller
 {
@@ -53,12 +54,24 @@ public:
   EUREKA_ACKERMANN_CONTROLLER__VISIBILITY_PUBLIC void
   initialize_implementation_parameter_listener() override;
 
-  EUREKA_ACKERMANN_CONTROLLER__VISIBILITY_PUBLIC bool update_odometry(
-    const rclcpp::Duration & period) override;
+  EUREKA_ACKERMANN_CONTROLLER__VISIBILITY_PUBLIC void
+  imu_subscriber_callback(const sensor_msgs::msg::Imu::SharedPtr msg);
+
+  EUREKA_ACKERMANN_CONTROLLER__VISIBILITY_PUBLIC bool
+  update_odometry(const rclcpp::Duration & period) override;
 
 protected:
   std::shared_ptr<eureka_ackermann_controller::ParamListener> ackermann_param_listener_;
   eureka_ackermann_controller::Params ackermann_params_;
+
+  rclcpp::Subscription<sensor_msgs::msg::Imu>::SharedPtr imu_subscriber;
+
+  tf2::Quaternion orientation;
+  tf2::Matrix3x3 orientation_matrix;
+
+  double current_roll;
+  double current_pitch;
+  double current_yaw;
 };
 }  // namespace eureka_ackermann_controller
 

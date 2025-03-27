@@ -133,7 +133,7 @@ public:
    * \param omega_bz Angular velocity [rad/s]
    * \param dt      time difference to last call
    */
-  void update_open_loop(const double v_bx, const double omega_bz, const double dt);
+  void update_open_loop(const double v_bx, const double omega_bz, const double pitch_angle, const double dt);
 
   /**
    * \brief Set odometry type
@@ -160,9 +160,23 @@ public:
   double get_y() const { return y_; }
 
   /**
+   * \brief z position getter
+   * \return z position [m]
+   */
+  double get_z() const { return z_; }
+
+  /**
    * \brief linear velocity getter
    * \return linear velocity [m/s]
    */
+  double get_linear_x() const { return linear_x_; }
+
+  /**
+   * \brief linear velocity getter
+   * \return linear velocity [m/s]
+   */
+  double get_linear_z() const { return linear_z_;}
+
   double get_linear() const { return linear_; }
 
   /**
@@ -205,7 +219,7 @@ private:
    * \param omega_bz Angular velocity [rad/s]
    * \param dt      time difference to last call
    */
-  bool update_odometry(const double v_bx, const double omega_bz, const double dt);
+  // bool update_odometry(const double v_bx, const double omega_bz, const double dt);
 
   /**
    * \brief Integrates the velocities (linear and angular) using 2nd order Runge-Kutta
@@ -221,7 +235,7 @@ private:
    * \param omega_bz Angular velocity [rad/s]
    * \param dt time difference to last call
    */
-  void integrate_fk(const double v_bx, const double omega_bz, const double dt);
+  void integrate_fk(const double v_bx, const double omega_bz, const double pitch_angle, const double dt);
 
   /**
    * \brief Calculates steering angle from the desired twist
@@ -251,11 +265,14 @@ private:
   /// Current pose:
   double x_;          //   [m]
   double y_;          //   [m]
+  double z_;
   double steer_pos_;  // [rad]
   double heading_;    // [rad]
 
   /// Current velocity:
   double linear_;   //   [m/s]
+  double linear_x_;
+  double linear_z_;
   double angular_;  // [rad/s]
 
   /// Kinematic parameters
@@ -272,6 +289,8 @@ private:
   double traction_left_wheel_old_pos_;
   /// Rolling mean accumulators for the linear and angular velocities:
   size_t velocity_rolling_window_size_;
+  rcppmath::RollingMeanAccumulator<double> linear_x_acc_;
+  rcppmath::RollingMeanAccumulator<double> linear_z_acc_;
   rcppmath::RollingMeanAccumulator<double> linear_acc_;
   rcppmath::RollingMeanAccumulator<double> angular_acc_;
 };

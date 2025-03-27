@@ -25,15 +25,27 @@ controller_interface::CallbackReturn EurekaAckermannController::configure_odomet
 
   set_interface_numbers(NR_STATE_ITFS, NR_CMD_ITFS, NR_REF_ITFS);
 
+  imu_subscriber = get_node()->create_subscription<sensor_msgs::msg::Imu>(
+    "/imu/data",
+    rclcpp::SystemDefaultsQoS(),
+    std::bind(&EurekaAckermannController::imu_subscriber_callback, this, std::placeholders::_1));
+
   RCLCPP_INFO(get_node()->get_logger(), "ackermann odom configure successful");
   return controller_interface::CallbackReturn::SUCCESS;
+}
+
+void EurekaAckermannController::imu_subscriber_callback(const sensor_msgs::msg::Imu::SharedPtr msg)
+{
+  tf2::fromMsg(msg->orientation, orientation);
+  orientation_matrix.setRotation(orientation);
+  orientation_matrix.getRPY(current_roll, current_pitch, current_yaw);
 }
 
 bool EurekaAckermannController::update_odometry(const rclcpp::Duration & period)
 {
   if (params_.open_loop)
   {
-    odometry_.update_open_loop(last_linear_velocity_, last_angular_velocity_, period.seconds());
+    odometry_.update_open_loop(last_linear_velocity_, last_angular_velocity_, current_pitch, period.seconds());
   }
   else
   {
